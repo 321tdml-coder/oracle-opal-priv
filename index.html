@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>数秘神託</title>
+
+<style>
+body{
+  margin:0;min-height:100vh;display:flex;justify-content:center;align-items:center;
+  background:radial-gradient(circle at center,#0b0b10 0%,#000 70%);
+  color:#eee;font-family:"Hiragino Mincho ProN",serif;
+}
+.container{text-align:center;width:100%;max-width:900px;}
+.title{color:#d4af37;letter-spacing:0.6rem;font-size:2.6rem;margin-bottom:30px;}
+
+button,a.opal-link{
+  background:none;color:#d4af37;border:1px solid #d4af37;
+  padding:14px 48px;font-size:1.2rem;cursor:pointer;
+  letter-spacing:0.3rem;text-decoration:none;
+  display:inline-block;
+}
+button:disabled{opacity:.4;cursor:not-allowed;}
+
+.drums{display:flex;justify-content:center;gap:40px;margin:50px 0;}
+.drum{
+  width:160px;height:140px;border-radius:20px;
+  background:rgba(255,255,255,0.05);
+  display:flex;align-items:center;justify-content:center;
+  font-size:3.8rem;letter-spacing:.2rem;
+  box-shadow:0 0 30px rgba(212,175,55,0.15);
+}
+.gold{color:#ffd700;text-shadow:0 0 14px rgba(255,215,0,.9);}
+
+.result{
+  margin-top:30px;font-size:4.8rem;letter-spacing:.5rem;
+  opacity:0;
+}
+.breath{animation:breath 4s ease-in-out infinite;}
+@keyframes breath{0%,100%{opacity:.4;}50%{opacity:1;}}
+
+.oracle-text{
+  margin-top:20px;
+  font-size:1.1rem;
+  letter-spacing:.15rem;
+  color:#ccc;
+  opacity:0;
+  transition:opacity 1.5s ease;
+}
+
+.final-number{
+  margin-top:16px;
+  font-size:2.2rem;
+  color:#d4af37;
+  letter-spacing:.3rem;
+  opacity:0;
+}
+
+.notice{margin-top:15px;color:#aaa;font-size:1rem;}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+  <div class="title">数秘神託</div>
+
+  <button id="drawBtn" onclick="start()">引く</button>
+
+  <div class="drums">
+    <div class="drum" id="d1">---</div>
+    <div class="drum" id="d2">---</div>
+    <div class="drum" id="d3">---</div>
+  </div>
+
+  <div class="result" id="final"></div>
+
+  <div class="oracle-text" id="oracleText"></div>
+  <div class="final-number breath" id="finalDigit"></div>
+
+  <a
+    id="opalLink"
+    class="opal-link"
+    href="https://opal.google/app/1Ha5kXQQAXMZQZOei5DhEAyDwYeN6IlBN"
+    target="_blank"
+    style="display:none"
+    onclick="copyOracle()"
+  >
+    この数をもって占う
+  </a>
+
+  <div class="notice" id="notice"></div>
+  <button onclick="unlockOracle()" style="margin-top:15px;">封印解除</button>
+
+</div>
+
+<script>
+const todayKey="oracle-date";
+const today=new Date().toDateString();
+
+const drawBtn=document.getElementById("drawBtn");
+const notice=document.getElementById("notice");
+const opalLink=document.getElementById("opalLink");
+const oracleTextEl=document.getElementById("oracleText");
+const finalDigitEl=document.getElementById("finalDigit");
+
+if(localStorage.getItem(todayKey)===today){
+  drawBtn.disabled=true;
+  notice.innerText="本日の神託はすでに示されています";
+}
+
+let allDigits=[];
+let stage=0;
+let latestOracleText="";
+
+function roll(el,done){
+  let start=performance.now();
+  const duration=2600;
+  function tick(now){
+    if(now-start<duration){
+      el.innerHTML=format(Math.floor(Math.random()*10));
+      requestAnimationFrame(tick);
+    }else{
+      const n=Math.floor(Math.random()*10);
+      el.innerHTML=format(n);
+      done(n);
+    }
+  }
+  requestAnimationFrame(tick);
+}
+
+function format(n){
+  if([3,6,9].includes(n)) return `<span class="gold">${n}</span>`;
+  return n;
+}
+
+function start(){
+  drawBtn.disabled=true;
+  notice.innerText="";
+  opalLink.style.display="none";
+  oracleTextEl.style.opacity=0;
+  finalDigitEl.style.opacity=0;
+  document.getElementById("final").style.opacity=0;
+  allDigits=[];
+  stage=0;
+  nextStage();
+  localStorage.setItem(todayKey,today);
+}
+
+function nextStage(){
+  stage++;
+  const els=[d1,d2,d3];
+  let count=0;
+  els.forEach(el=>{
+    roll(el,n=>{
+      allDigits.push(n);
+      count++;
+      if(count===3){
+        if(stage<3) setTimeout(nextStage,800);
+        else setTimeout(showFinal,1000);
+      }
+    });
+  });
+}
+
+function calcFinalDigit(nums){
+  let sum = nums.reduce((a,b)=>a+b,0);
+  while(sum >= 10){
+    sum = String(sum).split("").reduce((a,b)=>a+Number(b),0);
+  }
+  return sum;
+}
+
+function showFinal(){
+  const f=document.getElementById("final");
+  f.innerHTML=allDigits.map(n=>format(n)).join("");
+  f.classList.add("breath");
+  f.style.opacity=1;
+
+  prepareOracleText();
+
+  oracleTextEl.textContent = latestOracleText;
+  oracleTextEl.style.opacity = 1;
+
+  const finalNum = calcFinalDigit(allDigits);
+  setTimeout(()=>{
+    finalDigitEl.textContent = `最終数秘：${finalNum}`;
+    finalDigitEl.style.opacity = 1;
+  }, 1800);
+
+  opalLink.style.display="inline-block";
+}
+
+function prepareOracleText(){
+  const now=new Date();
+  const time=now.toLocaleString("ja-JP",{hour12:false});
+  const finalNum = calcFinalDigit(allDigits);
+  latestOracleText =
+`${time}
+${allDigits.join("")}
+最終数秘：${finalNum}`;
+}
+
+async function copyOracle(){
+  await navigator.clipboard.writeText(latestOracleText);
+  notice.innerText="日時・9桁・最終数秘をコピーしました";
+}
+
+function unlockOracle(){
+  localStorage.removeItem(todayKey);
+  location.reload();
+}
+</script>
+</body>
+</html>
